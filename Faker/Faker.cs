@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 using Generators;
 
 namespace Faker
@@ -14,7 +12,8 @@ namespace Faker
 
         public Faker()
         {
-            _generators = LoadGenerators();    
+            _generators = LoadGenerators();
+            LoadGeneratorsFromDirectory();    
         }
         
         private readonly Dictionary<Type, IGenerator> _generators;
@@ -23,33 +22,50 @@ namespace Faker
 
         private Dictionary<Type, IGenerator> LoadGenerators()
         {
-            DirectoryInfo pluginDirectory = new DirectoryInfo(_pluginPath);
             Dictionary<Type, IGenerator> generators = new Dictionary<Type, IGenerator>();
+            var currentAssembly = Assembly.GetExecutingAssembly();
+            var types = currentAssembly.GetTypes().Where(type =>
+                type.GetInterfaces().Any(i => i.FullName == typeof(IGenerator).FullName));
+            foreach (var type in types)
+            {
+                if (type.FullName != null && currentAssembly.CreateInstance(type.FullName) is IGenerator plugin)
+                {
+                    var generatorType = plugin.GetGenerationType();
+                    generators.Add(generatorType, plugin);
+                }
+            }
+
+            return generators;
+        }
+
+        private void LoadGeneratorsFromDirectory()
+        {
+            if (_generators == null) return;
+            
+            var pluginDirectory = new DirectoryInfo(_pluginPath);
             if (!pluginDirectory.Exists)
             {
                 pluginDirectory.Create();
-                return generators;
+                return;
             }
 
             var pluginFiles = Directory.GetFiles(pluginDirectory.FullName,"*.dll");
 
             foreach (var pluginFile in pluginFiles)
             {
-                Assembly assembly = Assembly.LoadFrom(pluginFile);
+                var assembly = Assembly.LoadFrom(pluginFile);
                 var types = assembly.GetTypes().Where(plugin =>
                     plugin.GetInterfaces().Any(i => i.FullName == typeof(IGenerator).FullName));
 
-                foreach (Type type in types)
+                foreach (var type in types)
                 {
                     if (type.FullName != null && assembly.CreateInstance(type.FullName) is IGenerator plugin)
                     {
-                        Type generatorType = plugin.GetGenerationType();
-                        generators.Add(generatorType, plugin);
+                        var generatorType = plugin.GetGenerationType();
+                        _generators.Add(generatorType, plugin);
                     }
                 }
             }
-
-            return generators;
         }
 
         private object GenerateValue(Type type)
@@ -65,15 +81,27 @@ namespace Faker
         public object Create<T>()
         {
             var type = typeof(T);
-
+            
+            if (type.IsAbstract)
+            {
+                throw new ArgumentException("Can't create an instance of abstract class");
+            }
+            
             var instance = InitializeWithConstructor(type);
-
-            if (instance != null)
+            if (instance == null)
+            {
+                instance = Activator.CreateInstance(type);
+            }
+            if (_generators.TryGetValue(type, out var generator))
+            {
+                instance = generator.Generate();
+            }
+            else if (type.IsValueType)
             {
                 FillObject(instance);
             }
 
-            return instance;
+            return Convert.ChangeType(instance, type);
         }
 
         private void FillObject(object instance)
@@ -82,15 +110,22 @@ namespace Faker
             var properties = new List<PropertyInfo>(type.GetProperties());
             foreach (var property in properties)
             {
-                if (property.CanWrite)
+                if (!property.CanWrite) continue;
+                
+                if (_generators.TryGetValue(property.PropertyType, out var generator))
                 {
-                    property.SetValue(instance, GenerateValue(property.PropertyType));
+                    property.SetValue(instance, generator.Generate());
                 }
             }
             var fieldInfos = new List<FieldInfo>(type.GetFields());
             foreach (var fieldInfo in fieldInfos)
             {
-                fieldInfo.SetValue(instance, GenerateValue(fieldInfo.FieldType));
+                if (fieldInfo.IsLiteral) continue;
+                
+                if (_generators.TryGetValue(fieldInfo.FieldType, out var generator))
+                {
+                    fieldInfo.SetValue(instance, generator.Generate());    
+                }
             }
         }
 
@@ -98,7 +133,7 @@ namespace Faker
         {
             if (constructors == null || constructors.Length <= 0) return null;
             
-            ConstructorInfo constructorInfo = constructors[0];
+            var constructorInfo = constructors[0];
             foreach (var constructor in constructors)
             {
                 if (constructor.GetParameters().Length > constructorInfo.GetParameters().Length)
@@ -112,7 +147,7 @@ namespace Faker
 
         private object InitializeWithConstructor(Type type)
         {
-            ConstructorInfo[] constructorInfos = type.GetConstructors();
+            var constructorInfos = type.GetConstructors();
             var constructorInfo = GetConstructorWithMaxNumberOfParameters(constructorInfos);
             if (constructorInfo != null)
             {
@@ -121,10 +156,10 @@ namespace Faker
                 foreach (var parameterInfo in parametersInfo)
                 {
                     var parameterType = parameterInfo.ParameterType;
-                    object parameter = GenerateValue(parameterType);
+                    var parameter = GenerateValue(parameterType);
                     constructorParameters.Add(parameter);
                 }
-                object instance = constructorInfo.Invoke(constructorParameters.ToArray());
+                var instance = constructorInfo.Invoke(constructorParameters.ToArray());
 
                 return instance;
             }
