@@ -12,7 +12,7 @@ namespace Generators
 
         public Type GetGenerationType()
         {
-            return typeof(string);
+            return typeof(int);
         }
     }
 }
