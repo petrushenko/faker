@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Generators
+namespace Faker
 {
     public class BoolGenerator : IGenerator
     {

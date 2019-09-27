@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace Generators
+namespace Faker
 {
     public class StringGenerator : IGenerator
     {
