@@ -19,7 +19,6 @@ namespace Faker
         
         private readonly Dictionary<Type, IGenerator> _generators;
         private readonly List<IGenericGeneratorFactory> _genericGeneratorFactory;
-
         private readonly string _pluginPath = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
 
         private void LoadGenerators()
@@ -154,7 +153,7 @@ namespace Faker
             foreach (var property in properties)
             {
                 if (!property.CanWrite) continue;
-                Type propertyType = property.PropertyType;
+                var propertyType = property.PropertyType;
                 var value = GenerateValue(propertyType, propertyType == instance.GetType());
                 property.SetValue(instance, value);
             }
@@ -202,7 +201,6 @@ namespace Faker
             var instance = constructorInfo.Invoke(constructorParameters.ToArray());
 
             return instance;
-
         }
     }
 }

@@ -6,7 +6,7 @@ namespace Faker
     {
         public object Generate()
         {
-            Random random = new Random();
+            var random = new Random();
             double result;
             do
             {

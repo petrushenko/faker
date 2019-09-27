@@ -7,15 +7,15 @@ namespace Faker
     {
         public object Generate()
         {
-            StringBuilder builder = new StringBuilder();
-            Random random = new Random();
-            int size = random.Next(1,
+            var builder = new StringBuilder();
+            var random = new Random();
+            var size = random.Next(1,
                 100);
-            for (int i = 0;
+            for (var i = 0;
                 i < size;
                 i++)
             {
-                char symbol = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65)));
+                var symbol = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65)));
                 builder.Append(symbol);
             }
 

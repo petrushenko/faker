@@ -6,8 +6,8 @@ namespace Faker
     {
         public object Generate()
         {
-            Random random = new Random();
-            return random.Next(1, Int32.MaxValue);
+            var random = new Random();
+            return random.Next(1, int.MaxValue);
         }
 
         public Type GetGenerationType()
