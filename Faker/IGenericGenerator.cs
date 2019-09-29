@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Faker
+﻿namespace Faker
 {
     public interface IGenericGenerator : IGenerator
     {
