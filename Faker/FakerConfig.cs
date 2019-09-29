@@ -9,15 +9,15 @@ namespace Faker
 {
     public class FakerConfig
     {
-        private Dictionary<MemberInfo, IGenerator> Generators;
+        private Dictionary<MemberInfo, IGenerator> _generators;
 
         internal IGenerator GetGeneratorByName(string parameterName)
         {
-            foreach (var member in Generators.Keys)
+            foreach (var member in _generators.Keys)
             {
                 if (member.Name.Equals(parameterName, StringComparison.OrdinalIgnoreCase))
                 {
-                    Generators.TryGetValue(member, out var generator);
+                    _generators.TryGetValue(member, out var generator);
                     return generator;
                 }
             }
@@ -27,13 +27,13 @@ namespace Faker
 
         internal IGenerator GetGeneratorByMemberInfo(MemberInfo memberInfo)
         {
-            Generators.TryGetValue(memberInfo, out var generator);
+            _generators.TryGetValue(memberInfo, out var generator);
             return generator;
         }
 
         public FakerConfig()
         {
-            Generators = new Dictionary<MemberInfo, IGenerator>();
+            _generators = new Dictionary<MemberInfo, IGenerator>();
         }
 
         public void Add<TClass, TMember, TGenerator>(Expression<Func<TClass, TMember>> expressionTree)
@@ -43,7 +43,7 @@ namespace Faker
 
             var body = (MemberExpression)expressionTree.Body;
             var memberInfo = body.Member;
-            Generators.Add(memberInfo, generator);
+            _generators.Add(memberInfo, generator);
         }
     }
 }

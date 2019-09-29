@@ -4,7 +4,7 @@ namespace Faker
 {
     public class LongGenerator : IGenerator
     {
-        private readonly Random _random = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
+        private static readonly Random Random = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
 
         public object Generate()
         {
@@ -12,7 +12,7 @@ namespace Faker
             long result;
             do
             {
-                _random.NextBytes(buffer);
+                Random.NextBytes(buffer);
                 result = BitConverter.ToInt64(buffer, 0);
             } while (result != 0);
 
