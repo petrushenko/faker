@@ -2,10 +2,8 @@
 
 namespace Faker
 {
-    public interface IGenericGenerator
+    public interface IGenericGenerator : IGenerator
     {
-        object Generate();
 
-        Type GetGenerationType();
     }
 }

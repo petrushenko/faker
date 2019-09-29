@@ -5,11 +5,12 @@ namespace Faker
 {
     public class ListGenerator<T> : IGenericGenerator
     {
+        private readonly Random _random = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
+
         public object Generate()
         {
             var list = new List<T>();
-            var random = new Random();
-            var size = random.Next(1, 30);
+            var size = _random.Next(1, 30);
             var faker = new Faker();
             for (var i = 0; i < size; i++)
             {

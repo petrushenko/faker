@@ -4,10 +4,11 @@ namespace Faker
 {
     public class Int32Generator : IGenerator
     {
+        private readonly Random _random = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
+
         public object Generate()
         {
-            var random = new Random();
-            return random.Next(1, int.MaxValue);
+            return _random.Next(1, int.MaxValue);
         }
 
         public Type GetGenerationType()

@@ -4,15 +4,16 @@ namespace Faker
 {
     public class DoubleGenerator : IGenerator
     {
+        private readonly Random _random = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
+
         public object Generate()
         {
-            var random = new Random();
             double result;
             do
             {
-                result = random.NextDouble();
+                result = _random.NextDouble();
             } while (Math.Abs(Math.Abs(result - 0)) < 0.0000001);
-            return random.NextDouble();
+            return _random.NextDouble();
         }
 
         public Type GetGenerationType()
