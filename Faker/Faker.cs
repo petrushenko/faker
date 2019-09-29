@@ -11,7 +11,7 @@ namespace Faker
 
         public Faker()
         {
-            _config = null;
+            _config = new FakerConfig();
             _generators = new Dictionary<Type, IGenerator>();
             _genericGeneratorFactory = new List<IGenericGeneratorFactory>();
             LoadGenerators();
@@ -30,7 +30,7 @@ namespace Faker
         private readonly Dictionary<Type, IGenerator> _generators;
         private readonly List<IGenericGeneratorFactory> _genericGeneratorFactory;
         private readonly string _pluginPath = Path.Combine(Directory.GetCurrentDirectory(), "Plugins");
-        private FakerConfig _config;
+        private readonly FakerConfig _config;
 
         private void LoadGenerators()
         {
@@ -122,22 +122,23 @@ namespace Faker
             {
                 return generator.Generate();
             }
-            if (type.IsValueType || type.IsClass)
+            if (type.IsGenericType || type.IsArray || type.IsEnum)
+            {
+                var generators = CreateGenericGenerators(type);
+                if (type.IsArray || type.IsEnum) type = type.BaseType;
+                if (type != null && generators.TryGetValue(type, out var genericGenerator))
+                {
+                    return genericGenerator.Generate();
+                }
+            }
+            else if (type.IsValueType || type.IsClass)
             {
                 var instance = InitializeWithConstructor(type);
                 FillObject(instance);
                 return instance;
             }
-            if (type.IsGenericType)
-            {
-                var generators = CreateGenericGenerators(type);
-                if (generators.TryGetValue(type, out var genericGenerator))
-                {
-                    return genericGenerator.Generate();
-                }
-            }
-            
-            return Activator.CreateInstance(type);
+
+            return type != null ? Activator.CreateInstance(type) : null;
         }
 
         private Dictionary<Type, IGenerator> CreateGenericGenerators(Type type)
@@ -145,9 +146,24 @@ namespace Faker
             var generators = new Dictionary<Type, IGenerator>();
             foreach (var generatorFactory in _genericGeneratorFactory)
             {
-                var generator = generatorFactory.GetGenerator(type.GetGenericArguments());
+                IGenerator generator;
+                if (type.IsGenericType)
+                {
+                    generator = generatorFactory.GetGenerator(type.GetGenericArguments());
+                }
+                else if(type.GetElementType() != null)
+                {
+                    generator = generatorFactory.GetGenerator(new []{ type.GetElementType() });
+                }
+                else
+                {
+                    generator = generatorFactory.GetGenerator(new[] { type });
+                }
                 var generatorType = generator.GetGenerationType();
-                generators.Add(generatorType, generator);
+                if (!generators.ContainsKey(generatorType))
+                {
+                    generators.Add(generatorType, generator);
+                }
             }
 
             return generators;
@@ -217,8 +233,8 @@ namespace Faker
             var parametersInfo = constructorInfo.GetParameters();
             foreach (var parameterInfo in parametersInfo)
             {
-                string parameterName = parameterInfo.Name;
-                IGenerator generator = _config.GetGeneratorByName(parameterName);
+                var parameterName = parameterInfo.Name;
+                var generator = _config.GetGeneratorByName(parameterName);
                 if (generator != null)
                 {
                     constructorParameters.Add(generator.Generate());
