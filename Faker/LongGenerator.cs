@@ -14,7 +14,7 @@ namespace Faker
             {
                 Random.NextBytes(buffer);
                 result = BitConverter.ToInt64(buffer, 0);
-            } while (result != 0);
+            } while (result == 0);
 
             return result;
         }
