@@ -99,13 +99,14 @@ namespace Faker
                 return generator.Generate();
             }
 
+            if (_config.Excluded(type)) return null;
             if (currentClass) return null;
             if (type.IsValueType || type.IsClass)
             {
                 var method = typeof(Faker).GetMethod("Create");
                 if (method == null) return null;
                 var genericMethod = method.MakeGenericMethod(type);
-                return genericMethod.Invoke(new Faker(), null);
+                return genericMethod.Invoke(new Faker(_config), null);
             }
             return null;
         }
@@ -113,13 +114,15 @@ namespace Faker
         public object Create<T>()
         {
             var type = typeof(T);
-            
+            _config.ExcludeType(type);
             if (type.IsAbstract)
             {
+                _config.RemoveFromExcludedTypes(type);
                 return null;
             }
             if (_generators.TryGetValue(type, out var generator))
             {
+                _config.RemoveFromExcludedTypes(type);
                 return generator.Generate();
             }
             if (type.IsGenericType || type.IsArray || type.IsEnum)
@@ -128,6 +131,7 @@ namespace Faker
                 if (type.IsArray || type.IsEnum) type = type.BaseType;
                 if (type != null && generators.TryGetValue(type, out var genericGenerator))
                 {
+                    _config.RemoveFromExcludedTypes(type);
                     return genericGenerator.Generate();
                 }
             }
@@ -135,9 +139,10 @@ namespace Faker
             {
                 var instance = InitializeWithConstructor(type);
                 FillObject(instance);
+                _config.RemoveFromExcludedTypes(type);
                 return instance;
             }
-
+            _config.RemoveFromExcludedTypes(type);
             return type != null ? Activator.CreateInstance(type) : null;
         }
 
@@ -172,42 +177,49 @@ namespace Faker
         private void FillObject(object instance)
         {
             var type = instance.GetType();
-            
-            var properties = new List<PropertyInfo>(type.GetProperties());
-            foreach (var property in properties)
+
+            var members = new List<MemberInfo>(type.GetMembers());
+
+            foreach (var member in members)
             {
-                if (!property.CanWrite) continue;
-                var generator = _config.GetGeneratorByMemberInfo(property);
-                if (generator != null)
+                if (member.MemberType == MemberTypes.Field)
                 {
-                    property.SetValue(instance, generator.Generate());
+                    var fieldInfo = member as FieldInfo;
+                    if (fieldInfo == null) continue;
+                    if (fieldInfo.IsLiteral) continue;
+                    var generator = _config.GetGeneratorByMemberInfo(fieldInfo);
+                    if (generator != null)
+                    {
+                        fieldInfo.SetValue(instance, generator.Generate());
+                    }
+                    else
+                    {
+                        var fieldType = fieldInfo.FieldType;
+                        var value = GenerateValue(fieldType, fieldType == instance.GetType());
+                        fieldInfo.SetValue(instance, value);
+                    }
                 }
-                else
+                else if (member.MemberType == MemberTypes.Property)
                 {
-                    var propertyType = property.PropertyType;
-                    var value = GenerateValue(propertyType, propertyType == instance.GetType());
-                    property.SetValue(instance, value);
-                }
-            }
-            var fieldInfos = new List<FieldInfo>(type.GetFields());
-            foreach (var fieldInfo in fieldInfos)
-            {
-                if (fieldInfo.IsLiteral) continue;
-                var generator = _config.GetGeneratorByMemberInfo(fieldInfo);
-                if (generator != null)
-                {
-                    fieldInfo.SetValue(instance, generator.Generate());
-                }
-                else
-                {
-                    var fieldType = fieldInfo.FieldType;
-                    var value = GenerateValue(fieldType, fieldType == instance.GetType());
-                    fieldInfo.SetValue(instance, value);
+                    var propertyInfo = member as PropertyInfo;
+                    if (propertyInfo == null) continue;
+                    if (!propertyInfo.CanWrite) continue;
+                    var generator = _config.GetGeneratorByMemberInfo(propertyInfo);
+                    if (generator != null)
+                    {
+                        propertyInfo.SetValue(instance, generator.Generate());
+                    }
+                    else
+                    {
+                        var propertyType = propertyInfo.PropertyType;
+                        var value = GenerateValue(propertyType, propertyType == instance.GetType());
+                        propertyInfo.SetValue(instance, value);
+                    }
                 }
             }
         }
 
-        private ConstructorInfo GetConstructorWithMaxNumberOfParameters(ConstructorInfo[] constructors)
+        private static ConstructorInfo GetConstructorWithMaxNumberOfParameters(ConstructorInfo[] constructors)
         {
             if (constructors == null || constructors.Length <= 0) return null;
             
