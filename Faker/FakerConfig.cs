@@ -7,7 +7,9 @@ namespace Faker
 {
     public class FakerConfig
     {
-        private Dictionary<MemberInfo, IGenerator> _generators;
+        private readonly Dictionary<MemberInfo, IGenerator> _generators;
+
+        private readonly List<Type> excludedTypes = new List<Type>();
 
         internal IGenerator GetGeneratorByName(string parameterName)
         {
@@ -27,6 +29,21 @@ namespace Faker
         {
             _generators.TryGetValue(memberInfo, out var generator);
             return generator;
+        }
+
+        internal void ExcludeType(Type type)
+        {
+            excludedTypes.Add(type);
+        }
+
+        internal void RemoveFromExcludedTypes(Type type)
+        {
+            excludedTypes.Remove(type);
+        }
+
+        internal bool Excluded(Type type)
+        {
+            return excludedTypes.Contains(type);
         }
 
         public FakerConfig()
