@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 namespace Faker
 {
@@ -80,28 +81,21 @@ namespace Faker
             }
         }
 
-        private object GenerateValue(Type type, bool currentClass)
+        private object Create(Type type)
         {
-            if (_generators.TryGetValue(type, out var generator))
-            {
-                return generator.Generate();
-            }
-
-            if (_config.Excluded(type)) return null;
-            if (currentClass) return null;
-            if (type.IsValueType || type.IsClass)
-            {
-                var method = typeof(Faker).GetMethod("Create");
-                if (method == null) return null;
-                var genericMethod = method.MakeGenericMethod(type);
-                return genericMethod.Invoke(new Faker(_config), null);
-            }
-            return null;
+            if (type.IsPointer) return IntPtr.Zero;
+            var method = typeof(Faker).GetMethod("Create");
+            if (method == null) return null;
+            var genericMethod = method.MakeGenericMethod(type);
+            return genericMethod.Invoke(this, null);
         }
 
         public object Create<T>()
         {
             var type = typeof(T);
+
+            if (_config.Excluded(type)) return null;
+
             _config.ExcludeType(type);
             if (type.IsAbstract)
             {
@@ -117,21 +111,33 @@ namespace Faker
             {
                 var generators = CreateGenericGenerators(type);
                 if (type.IsArray || type.IsEnum) type = type.BaseType;
-                if (type != null && generators.TryGetValue(type, out var genericGenerator))
+                if (type == null) return null;
+                if (generators.TryGetValue(type, out var genericGenerator))
                 {
                     _config.RemoveFromExcludedTypes(type);
                     return genericGenerator.Generate();
                 }
+                else
+                {
+                    return Activator.CreateInstance(type);    
+                }
             }
-            else if (type.IsValueType || type.IsClass)
+            if (type.IsValueType || type.IsClass)
             {
-                var instance = InitializeWithConstructor(type);
-                FillObject(instance);
-                _config.RemoveFromExcludedTypes(type);
-                return instance;
+                try
+                {
+                    var instance = InitializeWithConstructor(type);
+                    FillObject(instance);
+                    _config.RemoveFromExcludedTypes(type);
+                    return instance;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
             }
             _config.RemoveFromExcludedTypes(type);
-            return type != null ? Activator.CreateInstance(type) : null;
+            return Activator.CreateInstance(type);
         }
 
         private Dictionary<Type, IGenerator> CreateGenericGenerators(Type type)
@@ -183,7 +189,7 @@ namespace Faker
                     else
                     {
                         var fieldType = fieldInfo.FieldType;
-                        var value = GenerateValue(fieldType, fieldType == instance.GetType());
+                        var value = Create(fieldType);
                         fieldInfo.SetValue(instance, value);
                     }
                 }
@@ -200,7 +206,7 @@ namespace Faker
                     else
                     {
                         var propertyType = propertyInfo.PropertyType;
-                        var value = GenerateValue(propertyType, propertyType == instance.GetType());
+                        var value = Create(propertyType);
                         propertyInfo.SetValue(instance, value);
                     }
                 }
@@ -242,7 +248,7 @@ namespace Faker
                 else
                 {
                     var parameterType = parameterInfo.ParameterType;
-                    var parameter = GenerateValue(parameterType, parameterType == type);
+                    var parameter = Create(parameterType);
                     constructorParameters.Add(parameter);
                 }
                 
