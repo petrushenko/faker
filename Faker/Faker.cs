@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace Faker
 {
@@ -93,53 +92,50 @@ namespace Faker
         public object Create<T>()
         {
             var type = typeof(T);
-
-            if (_config.Excluded(type)) return null;
-
+            if (_config.Excluded(type) || type.IsAbstract) return null;
             _config.ExcludeType(type);
-            if (type.IsAbstract)
-            {
-                _config.RemoveFromExcludedTypes(type);
-                return null;
-            }
+            object instance = null;
             if (_generators.TryGetValue(type, out var generator))
             {
-                _config.RemoveFromExcludedTypes(type);
-                return generator.Generate();
+                instance = generator.Generate();
             }
-            if (type.IsGenericType || type.IsArray || type.IsEnum)
+            else if (type.IsGenericType || type.IsArray || type.IsEnum)
             {
                 var generators = CreateGenericGenerators(type);
-                if (type.IsArray || type.IsEnum) type = type.BaseType;
-                if (type == null) return null;
-                if (generators.TryGetValue(type, out var genericGenerator))
+                if (type.IsArray || type.IsEnum)
                 {
-                    _config.RemoveFromExcludedTypes(type);
-                    return genericGenerator.Generate();
+                    type = type.BaseType;
                 }
-                else
+
+                if (type != null)
                 {
-                    return Activator.CreateInstance(type);    
+                    if (generators.TryGetValue(type, out var genericGenerator))
+                    {
+                        instance = genericGenerator.Generate();
+                    }
+                    else
+                    {
+                        instance = Activator.CreateInstance(type);
+                    }
                 }
             }
-            if (type.IsValueType || type.IsClass)
-            {
+            else if (type.IsClass || type.IsValueType)
+            {    
                 try
                 {
-                    var instance = InitializeWithConstructor(type);
+                    instance = InitializeWithConstructor(type);
                     FillObject(instance);
-                    _config.RemoveFromExcludedTypes(type);
-                    return instance;
+                    
                 }
                 catch (Exception)
                 {
-                    return null;
+                    instance = null;
                 }
             }
             _config.RemoveFromExcludedTypes(type);
-            return Activator.CreateInstance(type);
+            return instance;
         }
-
+        
         private Dictionary<Type, IGenerator> CreateGenericGenerators(Type type)
         {
             var generators = new Dictionary<Type, IGenerator>();
