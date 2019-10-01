@@ -95,7 +95,6 @@ namespace Faker.Tests
             var faker = new Faker(fakerConfig);
             var foo = faker.Create<Foo>() as Foo;
             Assert.AreEqual(foo.Field, "TEST");
-
         }
 
     }

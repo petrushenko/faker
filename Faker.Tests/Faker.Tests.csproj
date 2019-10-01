@@ -55,6 +55,7 @@
     <Compile Include="MyClass.cs" />
     <Compile Include="MyOtherClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StringGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
