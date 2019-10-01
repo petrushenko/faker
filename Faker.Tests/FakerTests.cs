@@ -87,5 +87,16 @@ namespace Faker.Tests
             Assert.AreNotEqual(stringValue, default);
         }
 
+        [TestMethod]
+        public void Config()
+        {
+            var fakerConfig = new FakerConfig();
+            fakerConfig.Add<Foo, string, FooStringGenerator>(Foo => Foo.Field);
+            var faker = new Faker(fakerConfig);
+            var foo = faker.Create<Foo>() as Foo;
+            Assert.AreEqual(foo.Field, "TEST");
+
+        }
+
     }
 }
