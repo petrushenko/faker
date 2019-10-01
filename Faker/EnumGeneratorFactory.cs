@@ -7,7 +7,7 @@ namespace Faker
         public IGenerator GetGenerator(Type[] genericType)
         {
             var enumGenericGeneratorType = typeof(EnumGenerator<>);
-            var enumGeneratorType = enumGenericGeneratorType.MakeGenericType(genericType);
+            var enumGeneratorType = enumGenericGeneratorType.MakeGenericType(genericType[0]);
             return (IGenerator)Activator.CreateInstance(enumGeneratorType);
         }
     }
