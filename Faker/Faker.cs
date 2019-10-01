@@ -35,20 +35,25 @@ namespace Faker
         private void LoadGenerators()
         {
             var currentAssembly = Assembly.GetExecutingAssembly();
-            var types = currentAssembly.GetTypes().Where(type =>
-                type.GetInterfaces().Any(i => i.FullName == typeof(IGenerator).FullName 
-                                              || i.FullName == typeof(IGenericGeneratorFactory).FullName));
+            LoadGeneratorsFromAssembly(currentAssembly);
+        }
+
+        private void LoadGeneratorsFromAssembly(Assembly assembly)
+        {
+            var types = assembly.GetTypes().Where(type =>
+                    type.GetInterfaces().Any(i => i.FullName == typeof(IGenerator).FullName
+                                                  || i.FullName == typeof(IGenericGeneratorFactory).FullName));
             foreach (var type in types)
             {
                 if (type.FullName == null) continue;
                 if (type.GetInterfaces().Contains(typeof(IGenericGenerator))) continue;
                 if (!type.IsClass) continue;
-                if (currentAssembly.CreateInstance(type.FullName) is IGenerator generatorPlugin)
+                if (assembly.CreateInstance(type.FullName) is IGenerator generatorPlugin)
                 {
                     var generatorType = generatorPlugin.GetGenerationType();
                     _generators.Add(generatorType, generatorPlugin);
                 }
-                else if(currentAssembly.CreateInstance(type.FullName) is IGenericGeneratorFactory generatorFactoryPlugin)
+                else if (assembly.CreateInstance(type.FullName) is IGenericGeneratorFactory generatorFactoryPlugin)
                 {
                     _genericGeneratorFactory.Add(generatorFactoryPlugin);
                 }
@@ -71,24 +76,7 @@ namespace Faker
             foreach (var pluginFile in pluginFiles)
             {
                 var assembly = Assembly.LoadFrom(pluginFile);
-                var types = assembly.GetTypes().Where(type =>
-                    type.GetInterfaces().Any(i => i.FullName == typeof(IGenerator).FullName 
-                                                  || i.FullName == typeof(IGenericGeneratorFactory).FullName));
-                foreach (var type in types)
-                {
-                    if (type.FullName == null) continue;
-                    if (type.GetInterfaces().Contains(typeof(IGenericGenerator))) continue;
-                    if (!type.IsClass) continue;
-                    if (assembly.CreateInstance(type.FullName) is IGenerator generatorPlugin)
-                    {
-                        var generatorType = generatorPlugin.GetGenerationType();
-                        _generators.Add(generatorType, generatorPlugin);
-                    }
-                    else if(assembly.CreateInstance(type.FullName) is IGenericGeneratorFactory generatorFactoryPlugin)
-                    {
-                        _genericGeneratorFactory.Add(generatorFactoryPlugin);
-                    }
-                }
+                LoadGeneratorsFromAssembly(assembly);
             }
         }
 
