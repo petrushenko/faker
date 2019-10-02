@@ -52,6 +52,7 @@
     <Compile Include="FakerTests.cs" />
     <Compile Include="Foo.cs" />
     <Compile Include="FooGenerator.cs" />
+    <Compile Include="FooIntGenerator.cs" />
     <Compile Include="MyClass.cs" />
     <Compile Include="MyOtherClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

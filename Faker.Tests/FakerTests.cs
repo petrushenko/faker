@@ -97,5 +97,31 @@ namespace Faker.Tests
             Assert.AreEqual(foo.Field, "TEST");
         }
 
+        [TestMethod]
+        public void ConfigInt()
+        {
+            var fakerConfig = new FakerConfig();
+            fakerConfig.Add<Foo, int, FooIntGenerator>(Foo => Foo.FieldInt);
+            var faker = new Faker(fakerConfig);
+            var foo = faker.Create<Foo>() as Foo;
+            Assert.AreEqual(foo.FieldInt, 123);
+        }
+
+        private class NoConstructorsCls
+        {
+            private NoConstructorsCls()
+            {
+
+            }
+        }
+            
+
+        [TestMethod]
+        public void NoConstructors()
+        {
+            var faker = new Faker();
+            var result = faker.Create<NoConstructorsCls>();
+        }
+
     }
 }
