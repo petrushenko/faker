@@ -50,7 +50,9 @@ namespace Faker
         {
             _generators = new Dictionary<MemberInfo, IGenerator>();
         }
-
+        //
+        // Expression<Func<TClass, object>>
+        //
         public void Add<TClass, TMember, TGenerator>(Expression<Func<TClass, TMember>> expressionTree)
         where TGenerator: IGenerator
         {

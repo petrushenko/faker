@@ -41,8 +41,7 @@ namespace Faker
         private void LoadGeneratorsFromAssembly(Assembly assembly)
         {
             var types = assembly.GetTypes().Where(type =>
-                    type.GetInterfaces().Any(i => i.FullName == typeof(IGenerator).FullName
-                                                  || i.FullName == typeof(IGenericGeneratorFactory).FullName));
+                    typeof(IGenerator).IsAssignableFrom(type) || typeof(IGenericGeneratorFactory).IsAssignableFrom(type));
             foreach (var type in types)
             {
                 if (type.FullName == null) continue;
@@ -124,7 +123,10 @@ namespace Faker
                 try
                 {
                     instance = (T) InitializeWithConstructor(type);
-                    FillObject(instance);
+                    if (instance != null)
+                    {
+                        FillObject(instance);
+                    }
                     
                 }
                 catch (Exception)
@@ -229,7 +231,7 @@ namespace Faker
         {
             var constructorInfos = type.GetConstructors();
             var constructorInfo = GetConstructorWithMaxNumberOfParameters(constructorInfos);
-            if (constructorInfo == null) return Activator.CreateInstance(type);
+            if (constructorInfo == null) return null;
             
             var constructorParameters = new List<object>();
             var parametersInfo = constructorInfo.GetParameters();
