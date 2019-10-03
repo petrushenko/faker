@@ -93,7 +93,7 @@ namespace Faker
             var type = typeof(T);
             if (_config.Excluded(type) || type.IsAbstract) return null;
             _config.ExcludeType(type);
-            var instance = default(T);
+            var instance = new object();
             if (_generators.TryGetValue(type, out var generator))
             {
                 instance = (T) generator.Generate();
@@ -114,7 +114,7 @@ namespace Faker
                     }
                     else
                     {
-                        instance = (T) Activator.CreateInstance(type);
+                        instance = default(T);
                     }
                 }
             }
@@ -122,7 +122,7 @@ namespace Faker
             {    
                 try
                 {
-                    instance = (T) InitializeWithConstructor(type);
+                    instance = InitializeWithConstructor(type);
                     if (instance != null)
                     {
                         FillObject(instance);
@@ -131,7 +131,7 @@ namespace Faker
                 }
                 catch (Exception)
                 {
-                    instance = default;
+                    instance = default(T);
                 }
             }
             _config.RemoveFromExcludedTypes(type);
